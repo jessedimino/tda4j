@@ -1,3 +1,7 @@
+/*
+We want to pass a simplex stream and then do all the proper stuff to it to get a barcode
+*/
+
 package org.appliedtopology.tda4j
 
 import org.appliedtopology.tda4j.barcode.PersistenceBar
@@ -11,24 +15,50 @@ import math.Ordering.Implicits.sortedSetOrdering
 //class ReducedSimplicialHomologyContext[VertexT: Ordering, CoefficientT: Field, FiltrationT: Ordering]()
 //  extends CellularHomologyContext[Simplex[VertexT], CoefficientT, FiltrationT]() {}
 
+
 class SimplicialHomologyContext[VertexT: Ordering, CoefficientT: Field, FiltrationT: Ordering]()
+    //Type parameters VertexT, CoefficientT, and FiltrationT
+        //VertexT has context bound Ordering which specifies we need a collection of vertices with an ordering on them
+        //CoefficientT has context bound Field specifying that we need coefficients from an underlying field
+        //FiltrationT has context bound Ordering specifying that we need an ordering on the filtration
     extends CellularHomologyContext[Simplex[VertexT], CoefficientT, FiltrationT] {}
+        //SimpliicalHomologyContext is a subclass of CellularHomologyContext
+
 
 class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, FiltrationT: Ordering]:
+    // CellT is a type parameter with context bound OrdedCell specifying we need a way to order elements in the cell
+    // CoefficientT is a type parameter with context bound Field specifying we need an underlying field structure
+    // FiltrationT is a type parameter with context bound Ordering specifying that we need an ordering on the filtration
 
   val chainRM = summon[Chain[CellT, CoefficientT] is RingModule]
+    //Immutable type that returns a canonical instance
+    // not sure where the is operator is from, I had difficulty in finding documentation
   import chainRM.*
+    //wildcard import
 
   import barcode.*
+    //wildcard import
 
   case class HomologyState(
     cycles: mutable.Map[CellT, Chain[CellT, CoefficientT]],
+      //Mutable map from CellT to Chain
+          //Need to double check what the cell type is
     cyclesBornBy: mutable.Map[CellT, CellT],
+      //Mutable map from CellT to CellT
+          //Why cell to cell?
     boundaries: mutable.Map[CellT, Chain[CellT, CoefficientT]],
+      //Mutable map from CellT to Chain[CellT, CoefficientT]
     boundariesBornBy: mutable.Map[CellT, CellT],
+      //Mutable map from CellT to CellT
     coboundaries: mutable.Map[CellT, Chain[CellT, CoefficientT]],
+      //Mutable map from CellT to Chain[CellT, CoefficientT]
     stream: CellStream[CellT, FiltrationT],
+      //Cellstream from CellT and FiltrationT
+          //Need to check what these types are
+      
     var current: FiltrationT,
+      //Define variable current that is a FiltrationT
+
     barcode: mutable.ArrayDeque[
       (
         Int,
@@ -37,17 +67,26 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
         Chain[CellT, CoefficientT]
       )
     ]
+      //barcode is a mutable Double Ended queue
+          //Takes an array of Int, FiltrationT, FiltrationT, and Chain[CellT, CoefficientT]
   ):
     given Ordering[CellT] = stream.filtrationOrdering
+        //Define given types for ordering CellT which is the filtration ordering on streams
     import Ordering.Implicits.infixOrderingOps
+        // import this
     given filtration: Filtration[CellT, FiltrationT] = stream
+        //Defines a given for the type Filtration[CellT, FiltrationT] whicb is just the stream
 
     val CellIterator: collection.BufferedIterator[CellT] = stream.iterator.buffered
+        //BufferedIterator for CellT that takes the stream iterator converted to a buffered iterator
 
     def diagramAt(
       f: FiltrationT
+        // argument f is a FiltrationT
     ): List[(Int, FiltrationT, FiltrationT)] =
+        //return type is List[(Int,FiltrationT,FiltrationT)]
       advanceTo(f)
+        //advacneTo
       (for
         (dim: Int, lower: FiltrationT, oldUpper: FiltrationT, cycle: Chain[CellT, CoefficientT]) <- barcode.toList
         if lower <= f
