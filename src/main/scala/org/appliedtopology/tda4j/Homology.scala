@@ -32,7 +32,10 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
 
   val chainRM = summon[Chain[CellT, CoefficientT] is RingModule]
     //Immutable type that returns a canonical instance
-    // not sure where the is operator is from, I had difficulty in finding documentation
+    //Observes context bound for Ring module
+    //representation for context bound
+    //Context bound on derived type
+
   import chainRM.*
     //wildcard import
 
@@ -42,10 +45,11 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
   case class HomologyState(
     cycles: mutable.Map[CellT, Chain[CellT, CoefficientT]],
       //Mutable map from CellT to Chain
-          //Need to double check what the cell type is
+          //Cell has a way to build a boundary
+          //lookup table leading cell to whole chain
     cyclesBornBy: mutable.Map[CellT, CellT],
       //Mutable map from CellT to CellT
-          //Why cell to cell?
+          //Introduction of which cell created this cycle
     boundaries: mutable.Map[CellT, Chain[CellT, CoefficientT]],
       //Mutable map from CellT to Chain[CellT, CoefficientT]
     boundariesBornBy: mutable.Map[CellT, CellT],
@@ -54,7 +58,7 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
       //Mutable map from CellT to Chain[CellT, CoefficientT]
     stream: CellStream[CellT, FiltrationT],
       //Cellstream from CellT and FiltrationT
-          //Need to check what these types are
+          //sequence of CellT
       
     var current: FiltrationT,
       //Define variable current that is a FiltrationT
@@ -69,7 +73,9 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
     ]
       //barcode is a mutable Double Ended queue
           //Takes an array of Int, FiltrationT, FiltrationT, and Chain[CellT, CoefficientT]
-  ):
+  ): // end of class definition
+
+        //extended body of class
     given Ordering[CellT] = stream.filtrationOrdering
         //Define given types for ordering CellT which is the filtration ordering on streams
     import Ordering.Implicits.infixOrderingOps
@@ -86,27 +92,27 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
     ): List[(Int, FiltrationT, FiltrationT)] =
         //return type is List[(Int,FiltrationT,FiltrationT)]
       advanceTo(f)
-        // not sure what this line is doing
+        // do all the computations to get you up to the filtration value defined by f
       (for
         (dim: Int, lower: FiltrationT, oldUpper: FiltrationT, cycle: Chain[CellT, CoefficientT]) <- barcode.toList
             //get each of the elements from the barcode in a list
         if lower <= f
         upper = oldUpper.min(f)
            //check whether the lower is less than the current filtration threshold
-           //if it is, set the upper bound to be min something?
-     yield (dim, lower, upper)) ++ ( \\return the dim, lower and upper from the above loop
+           //take the min of oldUpper and f
+     yield (dim, lower, upper)) ++ ( //return the dim, lower and upper from the above loop
         for
           (sigma, z) <- cycles
             //extract sigma and z from cycles                
           dim = sigma.dim
             //get the dim as the dimension of sigma
           lower = stream.filtrationValue.applyOrElse(sigma, _ => filtration.smallest)
-            // lower is sigma applied to the stream filtration value else the smallest filtration value
-            // what does it mean to apply sigma?
+            //take the filtration value of sigma, if it doesn't have a filtration value use the smallest filtration value 
         yield (dim, lower, filtration.largest)
             //return the dim, lower, and largest
       )
         //concatenate the two yield statements
+        //get all finite length bars, then construct all infinite length bars
 
     def barcodeAt(f: FiltrationT): List[PersistenceBar[FiltrationT, Nothing]] =
       diagramAt(f).map { (dim, l, u) =>
