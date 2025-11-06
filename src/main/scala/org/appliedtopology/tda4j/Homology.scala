@@ -86,18 +86,27 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
     ): List[(Int, FiltrationT, FiltrationT)] =
         //return type is List[(Int,FiltrationT,FiltrationT)]
       advanceTo(f)
-        //advacneTo
+        // not sure what this line is doing
       (for
         (dim: Int, lower: FiltrationT, oldUpper: FiltrationT, cycle: Chain[CellT, CoefficientT]) <- barcode.toList
+            //get each of the elements from the barcode in a list
         if lower <= f
         upper = oldUpper.min(f)
-      yield (dim, lower, upper)) ++ (
+           //check whether the lower is less than the current filtration threshold
+           //if it is, set the upper bound to be min something?
+     yield (dim, lower, upper)) ++ ( \\return the dim, lower and upper from the above loop
         for
           (sigma, z) <- cycles
+            //extract sigma and z from cycles                
           dim = sigma.dim
+            //get the dim as the dimension of sigma
           lower = stream.filtrationValue.applyOrElse(sigma, _ => filtration.smallest)
+            // lower is sigma applied to the stream filtration value else the smallest filtration value
+            // what does it mean to apply sigma?
         yield (dim, lower, filtration.largest)
+            //return the dim, lower, and largest
       )
+        //concatenate the two yield statements
 
     def barcodeAt(f: FiltrationT): List[PersistenceBar[FiltrationT, Nothing]] =
       diagramAt(f).map { (dim, l, u) =>
