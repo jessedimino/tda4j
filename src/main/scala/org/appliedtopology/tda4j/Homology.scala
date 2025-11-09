@@ -115,24 +115,40 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
         //get all finite length bars, then construct all infinite length bars
 
     def barcodeAt(f: FiltrationT): List[PersistenceBar[FiltrationT, Nothing]] =
+        //Takes a Filtration and Outputs a list of Persisence Barcodes
+        //Not sure why PersistenceBar takes a Nothing Type
       diagramAt(f).map { (dim, l, u) =>
+            //map the diagram at the specified Filtration Value
         val lower: BarcodeEndpoint[FiltrationT] = l match
           case i if i == filtration.smallest => NegativeInfinity()
           case f: FiltrationT                => ClosedEndpoint(f)
         val upper: BarcodeEndpoint[FiltrationT] = u match
           case i if i == filtration.largest => PositiveInfinity()
           case f: FiltrationT               => OpenEndpoint(f)
+              //Set lower and uppers to infinity as necessary 
         new PersistenceBar(dim, lower, upper, None)
+              // construct a new PersistenceBar to return 
+              // not sure why None is here
       }
 
     @tailrec
+        //tailrec for tail call optimization 
+        //honestly not really sure what that means
     private def reduceBy(
+        //private method
       z: Chain[CellT, CoefficientT],
+        //take a Chain z
       basis: mutable.Map[CellT, Chain[CellT, CoefficientT]],
+        //some basis that is a map from cells to chain
       reductionLog: Chain[CellT, CoefficientT] = Chain()
+        //Keep a reduction Log
+        //Not sure what is meant by Chain[CellT, CoefficientT] = Chain()
     )(using fr: (CoefficientT is Field)): (Chain[CellT, CoefficientT], Chain[CellT, CoefficientT]) =
+        //look for a given instance of CoefficientT is Field
+        //output array of chains
       z.leadingCell match
         case None => (z, reductionLog)
+            //If the leading cell of z is empty, output (z, reductionLog)
         case Some(sigma) =>
           if basis.contains(sigma) then
             val redCoeff = fr.divide(z.leadingCoefficient, basis(sigma).leadingCoefficient)
