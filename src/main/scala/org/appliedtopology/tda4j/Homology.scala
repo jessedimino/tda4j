@@ -150,22 +150,33 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
         case None => (z, reductionLog)
             //If the leading cell of z is empty, output (z, reductionLog)
         case Some(sigma) =>
+            //check if something is in sigma
           if basis.contains(sigma) then
             val redCoeff = fr.divide(z.leadingCoefficient, basis(sigma).leadingCoefficient)
             reduceBy(z - redCoeff ⊠ basis(sigma), basis, reductionLog + redCoeff ⊠ Chain(sigma))
+                //If sigma is already in the basis, then do the proper reduction
+                // need to double check what the symbol does, remember it was defined explicitly somewhere else3
           else (z, reductionLog)
+                // else just return (z, reductionLog)
 
     def advanceOne(): Unit =
+        //advanceOne function with no explicitly returned thing 
       if CellIterator.hasNext then
+        //Check if there is a next thing for the cell iterator
         val fr = summon[CoefficientT is Field]
+            //summon an instance of CoefficientT is Field
         val sigma: CellT = CellIterator.next()
+            //set sigma as the next cell
         val dsigma: Chain[CellT, CoefficientT] =
           sigma.boundary[CoefficientT]: Chain[CellT, CoefficientT]
+            //get the boundary of sigma 
         val (dsigmaReduced, reduction) = reduceBy(dsigma, boundaries)
+            //get the reduced boundary
         val coboundary = reduction.items.foldRight(fr.negate(fr.one) ⊠ Chain(sigma)) { (next, acc) =>
           val (spx, coeff) = next
           if coboundaries.contains(spx) then acc + coeff ⊠ coboundaries(spx)
           else acc
+            //need to brush up on coboundaries to understand better
         }
         if dsigmaReduced.isZero() then
           // adding a boundary to a boundary creates a new cycle as sigma + whatever whose boundary eliminated dsigma
@@ -178,29 +189,42 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
           coboundaries(dsigmaReduced.leadingCell.get) = coboundary
 
           val (_, cycleBasis) = reduceBy(dsigmaReduced, cycles)
+                // get the current cycleBasis
           val representativeCycle: Chain[CellT, CoefficientT] = cycleBasis.leadingCell match
             case None       => Chain()
             case Some(cell) => cycles(cell)
+                //get a representative cycle 
           cycleBasis.leadingCell match
             case None       => ()
             case Some(cell) => cycles.remove(cell)
+                //if there is no leading cell do nothing?
+                //if there is something in the cell remove it 
+                //we do this because it gets moved to the basis?
 
           val lower: FiltrationT = cycleBasis.leadingCell match
             case None => filtration.smallest
             case Some(spx) =>
               stream.filtrationValue.orElse(_ => filtration.smallest).compose(cyclesBornBy)(spx)
+                //Get the lower bound of the filtration value composed by the cyclesBornBy this filtration value
+                //If there is no current value, use the smallest
+                //not sure what's meant by spx here
           val upper: FiltrationT =
             stream.filtrationValue.orElse(_ => filtration.largest)(sigma)
+                //Get the upper bound applied to sigma, if there is no value, use the largest
 
           barcode.append((sigma.dim - 1, lower, upper, representativeCycle))
+                // append the proper stuff to the barcode
         current = stream.filtrationValue.lift(sigma).getOrElse(stream.smallest)
+                //confused by the lift keyword here
 
     def advanceTo(f: FiltrationT): Unit =
       while CellIterator.hasNext && f > stream.filtrationValue.lift(CellIterator.head).getOrElse(stream.smallest) do
         advanceOne()
+        // do all the proper homology computations up to the filtration value of f
 
     def advanceAll(): Unit =
       while CellIterator.hasNext do advanceOne()
+        //advance the homology computations as far as possible 
 
   def persistentHomology(stream: => CellStream[CellT, FiltrationT]): HomologyState =
     HomologyState(
@@ -215,6 +239,8 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
     ) // torsion part of barcode
 
 class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Field]:
+    //requires vertexes with ordering and coefficients from a field
+    //use Kruskal algorithm for homology computation
   case class HomologyState(
     cycles: mutable.Map[Simplex[VertexT], Chain[Simplex[VertexT], CoefficientT]],
     cyclesBornBy: mutable.Map[Simplex[VertexT], Simplex[VertexT]],
@@ -226,9 +252,11 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
     var currentDim: Int,
     var currentIterator: collection.BufferedIterator[Simplex[VertexT]],
     barcode: mutable.Map[Int, immutable.Queue[(Double, Double, Chain[Simplex[VertexT], CoefficientT])]]
+        //case class for all of the stuff needed to keep track of homology
   ):
     val chainRM = summon[Chain[Simplex[VertexT], CoefficientT] is RingModule]
     import chainRM.*
+        //summon the instance of ChainRM and do a wildcard import from the ChainRM package
 
     // first off, all vertices are immediately cycles
     cycles.addAll(stream.iterateDimension(0).map(cell => cell -> Chain(cell)))
@@ -314,6 +342,7 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
 
           barcode(currentDim) = barcode(currentDim).appended((lower, upper, representativeCycle))
         current = stream.filtrationValue.lift(sigma).getOrElse(stream.smallest)
+            //these are all more or less the same as the definitions in the cellular homology context class
       else
         currentDim += 1
         currentIterator = stream.iterateDimension
@@ -322,12 +351,17 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
         current = Double.NegativeInfinity
 
     def advanceTo(dim: Int, f: Double = Double.PositiveInfinity): Unit =
+        //takes an integer dimension and a filtration value with a default value of infinity
       while currentIterator.hasNext &&
         currentDim <= dim &&
         f > current
       do advanceOne()
+        //do all of the homology computations up to the specified filtration value
 
   def persistentHomology(stream: => StratifiedCellStream[Simplex[VertexT], Double]): HomologyState =
+        //does this notation mean that stream is a callbyname parameter?
+        //what advantages do we get? and what does that accomplish for us
+        //return a homology state
     HomologyState(
       mutable.Map.empty,
       mutable.Map.empty,
@@ -340,4 +374,5 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
       Iterator.empty.buffered,
       mutable.Map.empty
     )
+    //I assume this is just to initialize the homology state object then we can perform all our computation with it?
 }
