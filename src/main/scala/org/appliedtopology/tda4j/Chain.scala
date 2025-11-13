@@ -6,19 +6,28 @@ import scala.annotation.{tailrec, targetName}
 import scala.collection.mutable
 import math.Fractional.Implicits.infixFractionalOps
 
+//import stuff as necessary
+
 trait HasDimension:
   type Self
   extension (self : Self)
     def dim : Int
+    //trait specifying dimension
 
 trait Cell extends HasDimension:
+  //cell is a subtrait of HasDimension
   type Self
   extension (self : Self)
     def boundary[CoefficientT : Field] : Chain[Self, CoefficientT]
+      //cells have boundaries 
+        //coefficient with field structure to chain
 
 trait OrderedCell extends Cell { type Self : Ordering as ordering }
+  //define an ordered cell which is a subtrait of cell
+    //any class that tries to implement an ordereced cell needs an ordering
 
 given [CellT : OrderedCell as oCell] => Ordering[CellT] = oCell.ordering
+  // define a canonical instance for ordering cells
 
 
 /** Trait that defines what it means to have an ordered basis
