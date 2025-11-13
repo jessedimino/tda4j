@@ -1,5 +1,7 @@
 package org.appliedtopology.tda4j
 
+//this package literally just defines the basic field operations for field objects, there is not much to say
+
 trait Field:
   type Self
 
