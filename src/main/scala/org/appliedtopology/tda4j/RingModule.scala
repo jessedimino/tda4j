@@ -2,6 +2,8 @@ package org.appliedtopology.tda4j
 
 import scala.annotation.targetName
 
+//just defines the proper operations for the RingModule
+
 /** Specifies what it means for the type `Self` to be a module (or vector space) over the [Numeric] (ie ring-like) type
   * `R`.
   *
