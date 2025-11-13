@@ -5,6 +5,10 @@ import scala.math.Numeric.IntIsIntegral
 import math.Fractional.Implicits.infixFractionalOps
 import scala.collection.immutable.ArraySeq
 
+//this code literally just defines the proper stuff for finite fields, time is better spent deep diving elsewhere for now.
+
+
+
 class FiniteField(val p: Int) {
   opaque type Fp = Int
 
