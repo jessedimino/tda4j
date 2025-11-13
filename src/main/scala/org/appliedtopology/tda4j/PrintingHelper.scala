@@ -1,6 +1,8 @@
 package org.appliedtopology.tda4j
 package unicode
 
+//utility functions for printing, not much to say here really
+
 def applyTranslation(trMap: Map[Char, String]): (String => String) = s => s.flatMap(trMap.orElse(_.toString))
 
 def applyCharTranslation(trMap: Map[Char, Char]): (String => String) = s => s.map(trMap.orElse(c => c))
