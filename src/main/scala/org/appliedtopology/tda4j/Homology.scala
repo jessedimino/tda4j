@@ -173,6 +173,7 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
         val (dsigmaReduced, reduction) = reduceBy(dsigma, boundaries)
             //get the reduced boundary
         val coboundary = reduction.items.foldRight(fr.negate(fr.one) ⊠ Chain(sigma)) { (next, acc) =>
+            //boxtimes is the symbol for left scalar multiplication unless there is another overloaded definition I missed
           val (spx, coeff) = next
           if coboundaries.contains(spx) then acc + coeff ⊠ coboundaries(spx)
           else acc
