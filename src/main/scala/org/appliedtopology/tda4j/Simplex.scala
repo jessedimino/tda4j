@@ -10,13 +10,20 @@ import math.Ordering.Implicits.sortedSetOrdering
  */
 
 type Simplex[VertexT] = SortedSet[VertexT]
+  //simplex is just a sorted set of vertices
 
 extension [VertexT : Ordering](spx : Simplex[VertexT])
+  //extension of ordered vertices to simplex
   def show : String = spx.mkString(s"∆(", ",", ")")
+    //function to print simplexes
 
 object Simplex:
+  //define the simplex object
   def from[VertexT : Ordering, T <: Seq[VertexT]](vertices : T) : Simplex[VertexT] = SortedSet.from(vertices)
+    //function to construct simplex from vertices with an ordering, and T which is a subtype of seq[VertexT]
+    //returns a simplex by just literally creating the sorted set from the vertices
   def apply[VertexT : Ordering](vertices : VertexT*) : Simplex[VertexT] = from(vertices)
+    //apply the ordering to the vertices to get a simplex
 
 /** Convenience method for defining simplices
  *
@@ -25,6 +32,8 @@ object Simplex:
 def ∆[VertexT : Ordering](vertices : VertexT*) : Simplex[VertexT] = Simplex.from(vertices)
 
 def simplexOrdering[VertexT](using vtxOrd : Ordering[VertexT]) : Ordering[Simplex[VertexT]] = sortedSetOrdering(vtxOrd)
+  //simplex ordering is the sorted set ordering on the vertex ordering
+  //whatever that actually means
 def Simplex_is_OrderedCell[VertexT](using vtxOrd : Ordering[VertexT])(setOrdering : Ordering[Simplex[VertexT]] = simplexOrdering(using vtxOrd)): (Simplex[VertexT] is OrderedCell) =
   new(Simplex[VertexT] is OrderedCell) {
     override lazy val ordering = setOrdering
