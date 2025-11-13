@@ -14,8 +14,12 @@ import com.eatthepath.jvptree.*
   * @tparam VertexT
   *   Type of the vertex indices for the metric space
   */
-trait FiniteMetricSpace[VertexT] {
 
+//define type parameter for vertex indices in the metric space
+
+
+trait FiniteMetricSpace[VertexT] {
+ 
   /** Distance in the metric space. Takes two indices and returns a non-negative real number.
     * @param x
     *   Index of first point
