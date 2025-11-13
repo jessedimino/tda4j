@@ -207,7 +207,7 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
               stream.filtrationValue.orElse(_ => filtration.smallest).compose(cyclesBornBy)(spx)
                 //Get the lower bound of the filtration value composed by the cyclesBornBy this filtration value
                 //If there is no current value, use the smallest
-                //not sure what's meant by spx here
+                //spx is shorthand for a simplex
           val upper: FiltrationT =
             stream.filtrationValue.orElse(_ => filtration.largest)(sigma)
                 //Get the upper bound applied to sigma, if there is no value, use the largest
