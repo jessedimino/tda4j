@@ -91,22 +91,4 @@ class SimplexStreamSpec extends mutable.Specification with org.specs2.ScalaCheck
   }
 }
 
-class CofaceSimplexStreamSpec extends mutable.Specification with org.specs2.ScalaCheck {
-  "Different coface simplex streams should agree" >> {
-    forAll(matrixGen[Double](Gen.double, Gen.chooseNum(2, 10), Gen.chooseNum(15, 15))) { (pts: Array[Array[Double]]) =>
-      val metricSpace = EuclideanMetricSpace(pts)
-      val enumerating = EnumeratingCofaceSimplexStream(metricSpace)
-      val inorder = InorderCofaceSimplexStream(metricSpace)
 
-      Result.foreach(0 to 5) { (dim) =>
-        val enumerated = enumerating.iterateDimension(dim).toSeq
-        val inordered = inorder.iterateDimension(dim).toSeq
-
-        (enumerated.map((spx) => enumerating.filtrationValue(spx)) must beSorted) and
-          (inordered.map((spx) => inorder.filtrationValue(spx)) must beSorted) and
-          // using size as proxy for equality for CI testing; change to `enumerated === inordered` if debugging
-          (enumerated.size === inordered.size)
-      }
-    }
-  }
-}

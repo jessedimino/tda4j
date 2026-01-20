@@ -17,7 +17,7 @@ extension [VertexT : Ordering](spx : Simplex[VertexT])
 object Simplex:
   def from[VertexT : Ordering, T <: Seq[VertexT]](vertices : T) : Simplex[VertexT] = SortedSet.from(vertices)
   def apply[VertexT : Ordering](vertices : VertexT*) : Simplex[VertexT] = from(vertices)
-
+  def unapplySeq[VertexT : Ordering](spx : Simplex[VertexT]) : Option[Seq[VertexT]] = Some(spx.toSeq)
 /** Convenience method for defining simplices
  *
  * The character ∆ is typed as Alt+J on Mac GB layout, and has unicode code 0x0394.

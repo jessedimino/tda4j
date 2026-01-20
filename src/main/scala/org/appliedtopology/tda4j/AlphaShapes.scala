@@ -17,7 +17,9 @@ class AlphaShapes(val points: Array[Array[Double]])
 
   var simplexCache: Seq[Simplex[Int]] = metricSpace.elements.toSeq.map(Simplex(_))
   var cacheDimension: Int = 0
-
+  
+  val maxDimension: Int = points.size-1
+  
   def isDelaunay(pts: Array[Array[Double]]): Boolean = pts.size match
     case 0 => true
     case 1 => true

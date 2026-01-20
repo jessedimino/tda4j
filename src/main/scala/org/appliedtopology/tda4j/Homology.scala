@@ -1,10 +1,10 @@
 package org.appliedtopology.tda4j
 
 import org.appliedtopology.tda4j.barcode.PersistenceBar
+import org.scalacheck.Prop.True
 
 import collection.{immutable, mutable}
 import scala.annotation.tailrec
-
 import math.Fractional.Implicits.infixFractionalOps
 import math.Ordering.Implicits.sortedSetOrdering
 
@@ -36,7 +36,8 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
         FiltrationT,
         Chain[CellT, CoefficientT]
       )
-    ]
+    ],
+    maxDimension: Option[Int] = None
   ):
     given Ordering[CellT] = stream.filtrationOrdering
     import Ordering.Implicits.infixOrderingOps
@@ -86,53 +87,66 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
           else (z, reductionLog)
 
     def advanceOne(): Unit =
-      if CellIterator.hasNext then
+      if hasNext then
         val fr = summon[CoefficientT is Field]
         val sigma: CellT = CellIterator.next()
-        val dsigma: Chain[CellT, CoefficientT] =
-          sigma.boundary[CoefficientT]: Chain[CellT, CoefficientT]
-        val (dsigmaReduced, reduction) = reduceBy(dsigma, boundaries)
-        val coboundary = reduction.items.foldRight(fr.negate(fr.one) ⊠ Chain(sigma)) { (next, acc) =>
-          val (spx, coeff) = next
-          if coboundaries.contains(spx) then acc + coeff ⊠ coboundaries(spx)
-          else acc
+        maxDimension match {
+          case None => ()
+          case Some(d) if sigma.dim > d => ()
+          case Some(d) => {
+
+            val dsigma: Chain[CellT, CoefficientT] =
+              sigma.boundary[CoefficientT]: Chain[CellT, CoefficientT]
+            val (dsigmaReduced, reduction) = reduceBy(dsigma, boundaries)
+            val coboundary = reduction.items.foldRight(fr.negate(fr.one) ⊠ Chain(sigma)) { (next, acc) =>
+              val (spx, coeff) = next
+              if coboundaries.contains(spx) then acc + coeff ⊠ coboundaries(spx)
+              else acc
+            }
+            if dsigmaReduced.isZero() then
+              // adding a boundary to a boundary creates a new cycle as sigma + whatever whose boundary eliminated dsigma
+              cycles(coboundary.leadingCell.get) = coboundary
+              cyclesBornBy(coboundary.leadingCell.get) = sigma
+            else
+              // we have a new boundary witnessed
+              boundaries(dsigmaReduced.leadingCell.get) = dsigmaReduced
+              boundariesBornBy(dsigmaReduced.leadingCell.get) = sigma
+              coboundaries(dsigmaReduced.leadingCell.get) = coboundary
+
+              val (_, cycleBasis) = reduceBy(dsigmaReduced, cycles)
+              val representativeCycle: Chain[CellT, CoefficientT] = cycleBasis.leadingCell match
+                case None => Chain()
+                case Some(cell) => cycles(cell)
+              cycleBasis.leadingCell match
+                case None => ()
+                case Some(cell) => cycles.remove(cell)
+
+              val lower: FiltrationT = cycleBasis.leadingCell match
+                case None => filtration.smallest
+                case Some(spx) =>
+                  stream.filtrationValue.orElse(_ => filtration.smallest).compose(cyclesBornBy)(spx)
+              val upper: FiltrationT =
+                stream.filtrationValue.orElse(_ => filtration.largest)(sigma)
+
+              barcode.append((sigma.dim - 1, lower, upper, representativeCycle))
+            current = stream.filtrationValue.lift(sigma).getOrElse(stream.smallest)
+          }
         }
-        if dsigmaReduced.isZero() then
-          // adding a boundary to a boundary creates a new cycle as sigma + whatever whose boundary eliminated dsigma
-          cycles(coboundary.leadingCell.get) = coboundary
-          cyclesBornBy(coboundary.leadingCell.get) = sigma
-        else
-          // we have a new boundary witnessed
-          boundaries(dsigmaReduced.leadingCell.get) = dsigmaReduced
-          boundariesBornBy(dsigmaReduced.leadingCell.get) = sigma
-          coboundaries(dsigmaReduced.leadingCell.get) = coboundary
 
-          val (_, cycleBasis) = reduceBy(dsigmaReduced, cycles)
-          val representativeCycle: Chain[CellT, CoefficientT] = cycleBasis.leadingCell match
-            case None       => Chain()
-            case Some(cell) => cycles(cell)
-          cycleBasis.leadingCell match
-            case None       => ()
-            case Some(cell) => cycles.remove(cell)
-
-          val lower: FiltrationT = cycleBasis.leadingCell match
-            case None => filtration.smallest
-            case Some(spx) =>
-              stream.filtrationValue.orElse(_ => filtration.smallest).compose(cyclesBornBy)(spx)
-          val upper: FiltrationT =
-            stream.filtrationValue.orElse(_ => filtration.largest)(sigma)
-
-          barcode.append((sigma.dim - 1, lower, upper, representativeCycle))
-        current = stream.filtrationValue.lift(sigma).getOrElse(stream.smallest)
+    def hasNext: Boolean = CellIterator.hasNext && (
+      for (
+        maxd <- maxDimension
+      ) yield CellIterator.head.dim < maxd
+    ).getOrElse(true)
 
     def advanceTo(f: FiltrationT): Unit =
-      while CellIterator.hasNext && f > stream.filtrationValue.lift(CellIterator.head).getOrElse(stream.smallest) do
+      while hasNext && f > stream.filtrationValue.lift(CellIterator.head).getOrElse(stream.smallest) do
         advanceOne()
 
     def advanceAll(): Unit =
-      while CellIterator.hasNext do advanceOne()
+      while hasNext do advanceOne()
 
-  def persistentHomology(stream: => CellStream[CellT, FiltrationT]): HomologyState =
+  def persistentHomology(stream: => CellStream[CellT, FiltrationT],maxDimension: Option[Int] = None): HomologyState =
     HomologyState(
       mutable.Map.empty, // cycle basis
       mutable.Map.empty, // cycle born by
@@ -141,7 +155,8 @@ class CellularHomologyContext[CellT: OrderedCell, CoefficientT: Field, Filtratio
       mutable.Map.empty, // coboundary mapping
       stream, // simplex stream
       stream.smallest: FiltrationT, // computation done up until filtrationValue
-      mutable.ArrayDeque.empty
+      mutable.ArrayDeque.empty,
+      maxDimension
     ) // torsion part of barcode
 
 class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Field]:
@@ -155,7 +170,8 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
     var current: Double,
     var currentDim: Int,
     var currentIterator: collection.BufferedIterator[Simplex[VertexT]],
-    barcode: mutable.Map[Int, immutable.Queue[(Double, Double, Chain[Simplex[VertexT], CoefficientT])]]
+    barcode: mutable.Map[Int, immutable.Queue[(Double, Double, Chain[Simplex[VertexT], CoefficientT])]],
+    maxDimension: Option[Int] = None
   ):
     val chainRM = summon[Chain[Simplex[VertexT], CoefficientT] is RingModule]
     import chainRM.*
@@ -205,9 +221,18 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
     // setup is done, we should be ready to start dimension 2
     currentDim = 1
     current = Double.PositiveInfinity
-    
+
+    //Should this be < or <=?
+    //It was looking ahead to dimension 4, so it probably should be <
+    def hasNext: Boolean =
+      currentIterator.hasNext && (
+        for (
+          maxd <- maxDimension
+        ) yield currentIterator.head.dim < maxd
+        ).getOrElse(true)
+
     def advanceOne(): Unit =
-      if currentIterator.hasNext then
+      if hasNext then
         val fr = summon[CoefficientT is Field]
         val sigma = currentIterator.next()
         val dsigma: Chain[Simplex[VertexT], CoefficientT] = sigma.boundary
@@ -252,12 +277,12 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
         current = Double.NegativeInfinity
 
     def advanceTo(dim: Int, f: Double = Double.PositiveInfinity): Unit =
-      while currentIterator.hasNext &&
+      while hasNext &&
         currentDim <= dim &&
         f > current
       do advanceOne()
 
-  def persistentHomology(stream: => StratifiedCellStream[Simplex[VertexT], Double]): HomologyState =
+  def persistentHomology(stream: => StratifiedCellStream[Simplex[VertexT], Double], maxDimension: Option[Int] = None): HomologyState =
     HomologyState(
       mutable.Map.empty,
       mutable.Map.empty,
@@ -268,6 +293,7 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
       stream.smallest,
       0,
       Iterator.empty.buffered,
-      mutable.Map.empty
+      mutable.Map.empty,
+      maxDimension
     )
-}
+

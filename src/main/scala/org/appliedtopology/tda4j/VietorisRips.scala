@@ -87,6 +87,7 @@ case class RecursiveStackSimplexEnumerator(val metricSpace: FiniteMetricSpace[In
       if(edge_it.hasNext) {
         val edge = edge_it.next()
         val Simplex(i,j) = edge : @unchecked
+        //here we would just need to actually have an unapply method for simplex or unapply2seq
         val simplexedge : SimplexEdge = SimplexEdge.from(edge)
         val neighbors : SortedSet[Int] =
           ((query.neighbors(i,simplexedge.diameter)-i) &
@@ -124,16 +125,40 @@ case class RecursiveStackSimplexEnumerator(val metricSpace: FiniteMetricSpace[In
   def next(): Simplex[Int] = enumeratorStack.top.simplex.simplex + enumeratorStack.top.next()
 }
 
-class RecursiveStackVietorisRipsSimplexStream(val metricSpace: FiniteMetricSpace[Int])
+class RecursiveStackVietorisRipsSimplexStream(val metricSpace: FiniteMetricSpace[Int], override val maxDimension: Int = 3)
   extends StratifiedSimplexStream[Int,Double] with DoubleFiltration[Simplex[Int]] {
   override def filtrationValue: PartialFunction[Simplex[Int], Double] = FiniteMetricSpace.MaximumDistanceFiltrationValue[Int](metricSpace)
 
   override def filtrationOrdering: Ordering[Simplex[Int]] =
     Ordering.by(filtrationValue).orElse(simplexOrdering[Int])
 
+  //override def maxDimension: Int = metricSpace.size-1
+
   override def iterateDimension: PartialFunction[Int, Iterator[Simplex[Int]]] = {
     case 0 => metricSpace.elements.iterator.map((v) => Simplex(v))
     case 1 => RecursiveStackSimplexEnumerator(metricSpace, 1)().edges.iterator
     case d => RecursiveStackSimplexEnumerator(metricSpace, d-1)()
+  }
+}
+
+class NaiveVietorisRipsSimplexStream(val metricSpace : FiniteMetricSpace[Int], override val maxDimension: Int = 3) 
+  extends StratifiedSimplexStream[Int,Double] with DoubleFiltration[Simplex[Int]]{
+    override def filtrationValue: PartialFunction[Simplex[Int], Double] = FiniteMetricSpace.MaximumDistanceFiltrationValue[Int](metricSpace)
+
+    override def filtrationOrdering: Ordering[Simplex[Int]] =
+      Ordering.by(filtrationValue).orElse(simplexOrdering[Int])
+      
+  
+
+  override def iterateDimension: PartialFunction[Int, Iterator[Simplex[Int]]] = {
+    case 0 => metricSpace.elements.iterator.map((v) => Simplex(v))
+    case d => metricSpace
+      .elements
+      .toSet
+      .subsets(d+1)
+      .map((v) => Simplex.from(v.toSeq))
+      .toList
+      .sorted(using filtrationOrdering)
+      .iterator
   }
 }

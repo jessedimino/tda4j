@@ -36,8 +36,8 @@ trait FiniteMetricSpace[VertexT] {
     * @return
     *   Iterable that returns all points in the metric space
     */
-  def elements: Iterable[VertexT]
-
+  def elements: IndexedSeq[VertexT]
+  
   def contains(x: VertexT): Boolean
 
   /** Beyond this radius, the Vietoris-Rips complex is a cone and will have no further homological structure. See e.g.
@@ -62,6 +62,8 @@ object FiniteMetricSpace {
     * @tparam VertexT
     *   Type of vertex indices / indices into the metric space
     */
+  
+  //do all of the pairwise comparisons for the edges of the simplex and return the max distance
   class MaximumDistanceFiltrationValue[VertexT: Ordering](
     val metricSpace: FiniteMetricSpace[VertexT]
   ) extends PartialFunction[Simplex[VertexT], Double] {
@@ -87,8 +89,17 @@ object FiniteMetricSpace {
  *   Type of the vertex indices for the wrapped metric space
  */
 class IntMetricSpace[VertexT](val metricSpace: FiniteMetricSpace[VertexT]) extends FiniteMetricSpace[Int] {
+
+  this : IntMetricSpace[VertexT] =>
+
+  override def elements: Vector[Int] = (0 until size).toVector
+
+
   override def distance(x: Int, y: Int): Double =
     metricSpace.distance(metricSpace.elements(x), metricSpace.elements(y))
+  //my understanding is that we're trying to calculate the distance between the elements
+  //at index x and index y
+  //but scala is raising a fit at how we're trying to access these elements for some reason
 
   override def contains(x: Int): Boolean = (x < metricSpace.size) && (0 <= x)
 
@@ -96,8 +107,27 @@ class IntMetricSpace[VertexT](val metricSpace: FiniteMetricSpace[VertexT]) exten
 
   override def size: Int = metricSpace.size
 
-  override def elements: Iterable[Int] = (0 until size)
+  def distance_matrix: Array[Array[Double]] = {
+    val dists: Array[Array[Double]] = Array.ofDim[Double](this.size, this.size)
+    for (i <- (0 until this.size)) {
+      for (j <- (i + 1 until this.size))
+      {
+        dists(i)(j) = this.distance(i, j)
+        dists(j)(i) = dists(i)(j)
+      }
+    }
+      return dists
+  }
 }
+//implementation for distance matrix, 
+//Downstream it is expected to be Seq[Seq[Double]] but I could only get Array[Array[Double]]
+//Is it so bad if the ExplicitMetricSpace expects nested arrays?
+
+
+
+
+
+
 
 /** Takes in an explicit distance matrix, and performs lookups in this distance matrix.
   *
@@ -112,7 +142,7 @@ class IntMetricSpace[VertexT](val metricSpace: FiniteMetricSpace[VertexT]) exten
 class ExplicitMetricSpace(val dist: Seq[Seq[Double]]) extends FiniteMetricSpace[Int] {
   def distance(x: Int, y: Int): Double = dist(x)(y)
   def size: Int = dist.size
-  def elements: Iterable[Int] = Range(0, size)
+  def elements: IndexedSeq[Int] = Range(0, size)
   override def contains(x: Int): Boolean = 0 <= x & x < size
 }
 
@@ -140,7 +170,7 @@ class EuclideanMetricSpace(val pts: Array[Array[Double]]) extends FiniteMetricSp
     sqrt(pointSqDistance(pts(x), pts(y)))
   }
   def size: Int = pts.size
-  def elements: Iterable[Int] = Range(0, size)
+  def elements: IndexedSeq[Int] = Range(0, size)
   override def contains(x: Int): Boolean = 0 <= x & x < size
 
   lazy val vpdf : DistanceFunction[Array[Double]] =
@@ -197,7 +227,7 @@ case class SparseMetricSpace[VertexT : Ordering](metricSpace : FiniteMetricSpace
 
   /** Delegated */
   override def contains(x: VertexT): Boolean = metricSpace.contains(x)
-  override def elements: Iterable[VertexT] = metricSpace.elements
+  override def elements: IndexedSeq[VertexT] = metricSpace.elements
   override def size: Int = metricSpace.size
 
   override def distance(x: VertexT, y: VertexT): Double = 

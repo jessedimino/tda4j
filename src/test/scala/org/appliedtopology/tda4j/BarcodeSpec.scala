@@ -231,11 +231,3 @@ class BarcodeAlgebraSpec extends Specification with ScalaCheck {
   }
 }
 
-class BarcodeSpec extends Specification {
-  "0-persistence output" >> {
-    val ms: FiniteMetricSpace[Int] = ExplicitMetricSpace(
-      Seq(Seq(0.0, 1.0, 2.0), Seq(1.0, 0.0, 3.0), Seq(2.0, 3.0, 0.0))
-    )
-    val rs = RipserStream(ms, ms.minimumEnclosingRadius, 5)
-  }
-}

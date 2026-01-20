@@ -61,6 +61,7 @@ class Chain[CellT : Ordering, CoefficientT : Field] private[tda4j] (
     }
   }
 
+
   def collapseAll()(using fr: (CoefficientT is Field)): Unit =
     entries = mutable.PriorityQueue.from(
       entries
@@ -82,6 +83,12 @@ class Chain[CellT : Ordering, CoefficientT : Field] private[tda4j] (
   /** WARNING - this is potentially an expensive operation
    */
   override def equals(obj: Any): Boolean = obj match {
+    //my understanding is that the point of this function is to check whether obj is a chain
+    //if it is a chain, compare all the entries
+    //else return false
+    //the current version of Scala doesn't like that we're passing an object of type Any into
+    //a case class
+    //so we should be more specific in how to check for typing, or set a more explicit type bound
     case other: Chain[CellT, CoefficientT] =>
       collapseAll()
       other.collapseAll()
