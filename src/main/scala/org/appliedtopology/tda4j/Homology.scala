@@ -173,6 +173,7 @@ class SimplicialHomologyByDimensionContext[VertexT: Ordering, CoefficientT: Fiel
     barcode: mutable.Map[Int, immutable.Queue[(Double, Double, Chain[Simplex[VertexT], CoefficientT])]],
     maxDimension: Option[Int] = None
   ):
+    //given Ordering[VertexT] = stream.filtrationOrdering
     val chainRM = summon[Chain[Simplex[VertexT], CoefficientT] is RingModule]
     import chainRM.*
 

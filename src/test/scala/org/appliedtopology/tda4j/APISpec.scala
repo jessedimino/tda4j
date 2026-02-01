@@ -20,9 +20,9 @@ class APISpec extends mutable.Specification {
 
   //There's two different contexts that we can use for the persistent homology computations
   //This one uses Kruskal's algorithm as a way to build up the homology dimension by dimension
-  //given shc: SimplicialHomologyByDimensionContext[Int, Double] = SimplicialHomologyByDimensionContext[Int,Double]()
+  given shc: SimplicialHomologyByDimensionContext[Int, Double] = SimplicialHomologyByDimensionContext[Int,Double]()
   //This is the standard homology computation
-  given shc: SimplicialHomologyContext[Int, Double, Double] = SimplicialHomologyContext[Int,Double,Double]()
+  //given shc: SimplicialHomologyContext[Int, Double, Double] = SimplicialHomologyContext[Int,Double,Double]()
 
   //this was originally here, we can worry about the chain computations later
   /*
@@ -47,6 +47,9 @@ class APISpec extends mutable.Specification {
     // The [Int] is so that we can call the points as indexes 0,1,2,...
   val metricSpace: FiniteMetricSpace[Int] = EuclideanMetricSpace(xys)
 
+  println("Distance Matrix")
+  IntMetricSpace[Int](metricSpace).distance_matrix.foreach(println)
+
 
   //Once we have the metric space set up, and the appropriate vertex type, we can start creating the vietoris rips stream
   //We can specify the maximum number of dimensions that we want to consider sequentially
@@ -57,13 +60,17 @@ class APISpec extends mutable.Specification {
 
   //Once we have the stream initialized, we can pass it to the PeristentHomology method to actually do all of the neat homology computations
   //We can also specify the maxDimension here, though this might be vestigial already
-  val homology = persistentHomology(vrstream, maxDimension = Some(3))
+  val homology = shc.persistentHomology(vrstream, maxDimension = Some(3))
 
 
   //The big issue that I can see is that, occasionally components will have a death time before their birth time
   //I've also tested and this problem persists in both homology contexts
   //A lot of debugging work still needs to be done
-  println(homology.diagramAt(2.0))
+  homology.advanceTo(2,2.0)
+  println("Cycles Born By")
+  println(homology.cyclesBornBy)
+  println("Barcode")
+  //println(homology.diagramAt(2.0))
   println(homology.barcode)
 
 }

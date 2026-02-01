@@ -107,7 +107,7 @@ class IntMetricSpace[VertexT](val metricSpace: FiniteMetricSpace[VertexT]) exten
 
   override def size: Int = metricSpace.size
 
-  def distance_matrix: Array[Array[Double]] = {
+  def distance_matrix: Seq[Seq[Double]] = {
     val dists: Array[Array[Double]] = Array.ofDim[Double](this.size, this.size)
     for (i <- (0 until this.size)) {
       for (j <- (i + 1 until this.size))
@@ -116,7 +116,7 @@ class IntMetricSpace[VertexT](val metricSpace: FiniteMetricSpace[VertexT]) exten
         dists(j)(i) = dists(i)(j)
       }
     }
-      return dists
+      return dists.map(_.toSeq)
   }
 }
 //implementation for distance matrix, 
